@@ -12,40 +12,40 @@ import (
 	"time"
 )
 
-type elasticsearchQueryRequest struct {
+type esQueryRequest struct {
 	Query string `json:"query"`
 }
 
-type elasticsearchCursorRequest struct {
+type esCursorRequest struct {
 	Cursor string `json:"cursor"`
 }
 
-type elasticsearchColumnInfo struct {
-	Name string            `json:"name"`
-	Type elasticsearchType `json:"type"`
+type esColumnInfo struct {
+	Name string `json:"name"`
+	Type esType `json:"type"`
 }
 
-type elasticsearchResult struct {
-	Columns []elasticsearchColumnInfo `json:"columns"`
-	Rows    [][]interface{}           `json:"rows"`
-	Cursor  string                    `json:"Cursor"`
+type esResult struct {
+	Columns []esColumnInfo  `json:"columns"`
+	Rows    [][]interface{} `json:"rows"`
+	Cursor  string          `json:"Cursor"`
 }
 
 func newRows(dsn string, query string) *Rows {
-	byteReqBody, err := json.Marshal(elasticsearchQueryRequest{query})
+	byteReqBody, err := json.Marshal(esQueryRequest{query})
 	if err != nil {
 		panic(err)
 	}
 
-	return elasticsearchRequest(dsn, string(byteReqBody))
+	return esRequest(dsn, string(byteReqBody))
 }
 
 func nextRows(dsn string, cursor string) ([][]driver.Value, string) {
-	byteReqBody, err := json.Marshal(elasticsearchCursorRequest{cursor})
+	byteReqBody, err := json.Marshal(esCursorRequest{cursor})
 	if err != nil {
 		panic(err)
 	}
-	result := elasticsearchRequest(dsn, string(byteReqBody))
+	result := esRequest(dsn, string(byteReqBody))
 
 	return (*result).rows, (*result).cursor
 }
@@ -97,7 +97,7 @@ func parsingDSN(dsn string) (url, username, password string) {
 	return protocal + "://" + address + ":" + port + "/_xpack/sql", username, password
 }
 
-func postElasticsearch(dsn string, body string) string {
+func postEs(dsn string, body string) string {
 	url, username, password := parsingDSN(dsn)
 
 	client := http.Client{}
@@ -117,39 +117,39 @@ func postElasticsearch(dsn string, body string) string {
 	}
 	defer resp.Body.Close()
 
-	var elaResp string
+	var esResp string
 	buff := make([]byte, 10)
 	n, err := io.ReadFull(resp.Body, buff)
 	for err != io.EOF {
-		elaResp = elaResp + string(buff[:n])
+		esResp = esResp + string(buff[:n])
 		n, err = io.ReadFull(resp.Body, buff)
 	}
 
-	return elaResp
+	return esResp
 }
 
-func elasticsearchRequest(dsn string, body string) *Rows {
-	elaResp := postElasticsearch(dsn, body)
-	elaResult := elasticsearchResult{}
+func esRequest(dsn string, body string) *Rows {
+	esResp := postEs(dsn, body)
+	esResult := esResult{}
 
-	err := json.Unmarshal([]byte(elaResp), &elaResult)
+	err := json.Unmarshal([]byte(esResp), &esResult)
 	if err != nil {
 		panic(err)
 	}
 
-	if elaResult.Rows == nil {
-		panic(errors.New(elaResp))
+	if esResult.Rows == nil {
+		panic(errors.New(esResp))
 	}
 
 	var columns []string
-	var types []elasticsearchType
-	for _, columnInfo := range elaResult.Columns {
+	var types []esType
+	for _, columnInfo := range esResult.Columns {
 		columns = append(columns, columnInfo.Name)
 		types = append(types, columnInfo.Type)
 	}
 
 	var rows [][]driver.Value
-	for _, values := range elaResult.Rows {
+	for _, values := range esResult.Rows {
 		var row []driver.Value
 		for i, value := range values {
 			row = append(row, typeConvert(types[i], value))
@@ -162,29 +162,29 @@ func elasticsearchRequest(dsn string, body string) *Rows {
 		columns: columns,
 		types:   types,
 		rows:    rows,
-		cursor:  elaResult.Cursor,
+		cursor:  esResult.Cursor,
 	}
 }
 
-func typeConvert(elaType elasticsearchType, value interface{}) driver.Value {
+func typeConvert(t esType, value interface{}) driver.Value {
 	//Unsupported
-	//ElaTypeBinary, ElaTypeByte, ElaTypeObject, ElaTypeNested, ElaTypeUnsupported
-	switch elaType {
-	case ElaTypeKeyword, ElaTypeText, ElaTypeIP:
+	//esBinary, esByte, esObject, esNested, esUnsupported
+	switch t {
+	case esKeyword, esText, esIP:
 		return value.(string)
-	case ElaTypeShort, ElaTypeLong, ElaTypeFloat, ElaTypeHalfFloat, ElaTypeScaledFloat, ElaTypeDouble:
+	case esShort, esLong, esFloat, esHalfFloat, esScaledFloat, esDouble:
 		return value.(float64)
-	case ElaTypeInteger:
+	case esInteger:
 		return int(value.(float64))
-	case ElaTypeBoolean:
+	case esBoolean:
 		return value.(bool)
-	case ElaTypeDatetime:
+	case esDatetime:
 		t, err := time.Parse(time.RFC3339, value.(string))
 		if err != nil {
 			return nil
 		}
 		return t
-	case ElaTypeNull:
+	case esNull:
 		return nil
 	default:
 		return value

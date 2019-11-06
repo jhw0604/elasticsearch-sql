@@ -10,7 +10,7 @@ import (
 type Rows struct {
 	dsn     string
 	columns []string
-	types   []elasticsearchType
+	types   []esType
 	rows    [][]driver.Value
 	cursor  string
 }

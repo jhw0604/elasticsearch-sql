@@ -70,7 +70,7 @@ func TestStmt_Query(t *testing.T) {
 			&Rows{
 				dsn:     tsNewRows.URL,
 				columns: []string{"a", "b", "c"},
-				types:   []elasticsearchType{ElaTypeInteger, ElaTypeInteger, ElaTypeInteger},
+				types:   []esType{esInteger, esInteger, esInteger},
 				rows:    [][]driver.Value{[]driver.Value{1, 2, 3}},
 				cursor:  "",
 			},

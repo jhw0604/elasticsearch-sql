@@ -14,8 +14,8 @@ func TestRows_ColumnTypePrecisionScale(t *testing.T) {
 		wantScale     int64
 		wantOk        bool
 	}{
-		{"Success", &Rows{types: []elasticsearchType{ElaTypeShort, ElaTypeLong, ElaTypeFloat, ElaTypeHalfFloat, ElaTypeScaledFloat, ElaTypeDouble}}, args{0}, 0, 0, false},
-		{"Success", &Rows{types: []elasticsearchType{ElaTypeInteger}}, args{0}, 0, 0, false},
+		{"Success", &Rows{types: []esType{esShort, esLong, esFloat, esHalfFloat, esScaledFloat, esDouble}}, args{0}, 0, 0, false},
+		{"Success", &Rows{types: []esType{esInteger}}, args{0}, 0, 0, false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

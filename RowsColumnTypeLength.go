@@ -11,17 +11,17 @@ func (r *Rows) ColumnTypeLength(index int) (length int64, ok bool) {
 	}
 
 	switch r.types[index] {
-	case ElaTypeShort, ElaTypeLong, ElaTypeFloat, ElaTypeHalfFloat, ElaTypeScaledFloat, ElaTypeDouble, ElaTypeByte, ElaTypeInteger:
+	case esShort, esLong, esFloat, esHalfFloat, esScaledFloat, esDouble, esByte, esInteger:
 		return 64, true
-	case ElaTypeBoolean:
+	case esBoolean:
 		return 1, true
-	case ElaTypeDatetime:
+	case esDatetime:
 		return 24, true
-	case ElaTypeNull:
+	case esNull:
 		return 0, true
-	case ElaTypeObject, ElaTypeNested:
+	case esObject, esNested:
 		return 0, false
-	case ElaTypeUnsupported:
+	case esUnsupported:
 		return 0, false
 	default:
 		return 0, false

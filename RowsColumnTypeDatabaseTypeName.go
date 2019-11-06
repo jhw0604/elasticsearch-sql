@@ -10,7 +10,7 @@ func (r *Rows) ColumnTypeDatabaseTypeName(index int) (databaseTypeName string) {
 
 	defer func() {
 		if recover() != nil {
-			databaseTypeName = string(ElaTypeUnsupported)
+			databaseTypeName = string(esUnsupported)
 		}
 	}()
 	if 0 <= index && index < len(r.types) {

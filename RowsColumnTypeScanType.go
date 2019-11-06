@@ -18,19 +18,19 @@ func (r *Rows) ColumnTypeScanType(index int) (refType reflect.Type) {
 	}()
 
 	//Unsupported
-	//ElaTypeBinary, ElaTypeByte, ElaTypeObject, ElaTypeNested, ElaTypeUnsupported
+	//esBinary, esByte, esObject, esNested, esUnsupported
 	switch r.types[index] {
-	case ElaTypeKeyword, ElaTypeText, ElaTypeIP:
+	case esKeyword, esText, esIP:
 		refType = reflect.TypeOf("")
-	case ElaTypeShort, ElaTypeLong, ElaTypeFloat, ElaTypeHalfFloat, ElaTypeScaledFloat, ElaTypeDouble:
+	case esShort, esLong, esFloat, esHalfFloat, esScaledFloat, esDouble:
 		refType = reflect.TypeOf(float64(0))
-	case ElaTypeInteger:
+	case esInteger:
 		refType = reflect.TypeOf(int(0))
-	case ElaTypeBoolean:
+	case esBoolean:
 		refType = reflect.TypeOf(true)
-	case ElaTypeDatetime:
+	case esDatetime:
 		refType = reflect.TypeOf(time.Time{})
-	case ElaTypeNull:
+	case esNull:
 		refType = nil
 	default:
 		refType = reflect.TypeOf(r.rows[0][index])
