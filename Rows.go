@@ -56,14 +56,18 @@ func (r *Rows) Next(dest []driver.Value) error {
 	} else if r.rows == nil {
 		return io.EOF
 	} else if len(r.rows) <= 0 {
-		if r.cursor != "" {
-			r.rows, r.cursor = nextRows(r.dsn, r.cursor)
-			if len(r.rows) <= 0 {
-				return io.EOF
-			}
-		} else {
+		if r.cursor == "" {
 			return io.EOF
 		}
+
+		rows, cursor, err := nextRows(r.dsn, r.cursor)
+		if err != nil {
+			return err
+		} else if len(rows) <= 0 {
+			return io.EOF
+		}
+
+		r.rows, r.cursor = rows, cursor
 	}
 	copy(dest, r.rows[0])
 	r.rows = r.rows[1:]

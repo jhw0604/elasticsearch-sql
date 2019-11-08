@@ -63,5 +63,5 @@ func (s *Stmt) Query(args []driver.Value) (result driver.Rows, errResult error) 
 	}
 	newQusery := fmt.Sprintf(s.query, newArgs...)
 
-	return newRows(s.dsn, newQusery), nil
+	return newRows(s.dsn, newQusery)
 }

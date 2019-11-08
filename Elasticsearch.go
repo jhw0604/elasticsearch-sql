@@ -31,27 +31,27 @@ type esResult struct {
 	Cursor  string          `json:"Cursor"`
 }
 
-func newRows(dsn string, query string) *Rows {
+func newRows(dsn string, query string) (*Rows, error) {
 	byteReqBody, err := json.Marshal(esQueryRequest{query})
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
 	return esRequest(dsn, string(byteReqBody))
 }
 
-func nextRows(dsn string, cursor string) ([][]driver.Value, string) {
+func nextRows(dsn string, cursor string) ([][]driver.Value, string, error) {
 	byteReqBody, err := json.Marshal(esCursorRequest{cursor})
 	if err != nil {
-		panic(err)
+		return nil, "", err
 	}
-	result := esRequest(dsn, string(byteReqBody))
+	result, err := esRequest(dsn, string(byteReqBody))
 
-	return (*result).rows, (*result).cursor
+	return (*result).rows, (*result).cursor, err
 }
 
-func parsingDSN(dsn string) (url, username, password string) {
-	var protocal, address, port string
+func parsingDSN(dsn string) (url, username, password string, err error) {
+	var protocal, address, port, certBase64 string
 
 	dnsParts := strings.Split(dsn, "://")
 	if len(dnsParts) <= 1 {
@@ -62,7 +62,6 @@ func parsingDSN(dsn string) (url, username, password string) {
 		dsn = dnsParts[1]
 	}
 
-	var certBase64 string
 	dnsParts = strings.Split(dsn, "@")
 	if len(dnsParts) <= 1 {
 		certBase64 = ""
@@ -75,7 +74,7 @@ func parsingDSN(dsn string) (url, username, password string) {
 	if certBase64 != "" {
 		certByte, err := base64.URLEncoding.DecodeString(certBase64)
 		if err != nil {
-			panic(err)
+			return "", "", "", ErrInvalidArgs
 		}
 		certPart := strings.Split(string(certByte), ":")
 		username, password = certPart[0], certPart[1]
@@ -94,16 +93,19 @@ func parsingDSN(dsn string) (url, username, password string) {
 		}
 	}
 
-	return protocal + "://" + address + ":" + port + "/_xpack/sql", username, password
+	return protocal + "://" + address + ":" + port + "/_xpack/sql", username, password, nil
 }
 
-func postEs(dsn string, body string) string {
-	url, username, password := parsingDSN(dsn)
+func postEs(dsn string, body string) (string, error) {
+	url, username, password, err := parsingDSN(dsn)
+	if err != nil {
+		return "", err
+	}
 
 	client := http.Client{}
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer([]byte(body)))
 	if err != nil {
-		panic(err)
+		return "", err
 	}
 
 	req.Header.Set("Content-type", "application/json")
@@ -113,7 +115,7 @@ func postEs(dsn string, body string) string {
 
 	resp, err := client.Do(req)
 	if err != nil {
-		panic(err)
+		return "", err
 	}
 	defer resp.Body.Close()
 
@@ -125,20 +127,23 @@ func postEs(dsn string, body string) string {
 		n, err = io.ReadFull(resp.Body, buff)
 	}
 
-	return esResp
+	return esResp, nil
 }
 
-func esRequest(dsn string, body string) *Rows {
-	esResp := postEs(dsn, body)
-	esResult := esResult{}
-
-	err := json.Unmarshal([]byte(esResp), &esResult)
+func esRequest(dsn string, body string) (*Rows, error) {
+	esResp, err := postEs(dsn, body)
 	if err != nil {
-		panic(err)
+		return nil, err
+	}
+
+	esResult := esResult{}
+	err = json.Unmarshal([]byte(esResp), &esResult)
+	if err != nil {
+		return nil, err
 	}
 
 	if esResult.Rows == nil {
-		panic(errors.New(esResp))
+		return nil, errors.New(esResp)
 	}
 
 	var columns []string
@@ -158,12 +163,13 @@ func esRequest(dsn string, body string) *Rows {
 	}
 
 	return &Rows{
-		dsn:     dsn,
-		columns: columns,
-		types:   types,
-		rows:    rows,
-		cursor:  esResult.Cursor,
-	}
+			dsn:     dsn,
+			columns: columns,
+			types:   types,
+			rows:    rows,
+			cursor:  esResult.Cursor,
+		},
+		nil
 }
 
 func typeConvert(t esType, value interface{}) driver.Value {
